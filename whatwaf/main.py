@@ -1,3 +1,4 @@
+# encoding: utf8
 import sys
 import time
 import shlex
@@ -5,10 +6,8 @@ import subprocess
 
 from lib.cmd import WhatWafParser
 from lib.firewall_found import request_issue_creation
-from content import (
-    detection_main,
-    encode
-)
+from content import detection_main, encode
+
 from lib.settings import (
     configure_request_headers,
     auto_assign,
@@ -30,18 +29,9 @@ from lib.settings import (
     RESULTS_TEMPLATE,
     display_cached
 )
-from lib.formatter import (
-    error,
-    info,
-    fatal,
-    warn,
-    success
-)
-from lib.database import (
-    initialize,
-    insert_payload,
-    fetch_data
-)
+# 显示颜色的方法
+from lib.formatter import error, info, fatal, warn, success
+from lib.database import initialize, insert_payload, fetch_data
 
 
 try:
@@ -51,11 +41,17 @@ except Exception:
 
 
 def main():
+    # WhatWafParser() 是继承 argparse 模块，然后自己把所有的options添加进去然后封装成的一个方法，
+    # 返回一个 opts = parser.parse_args() 对象
+    # main 函数就是处理所有的从命令行获取的 option， 然后做一些初始化的工作
     opt = WhatWafParser().cmd_parser()
 
     if not len(sys.argv) > 1:
         error("you failed to provide an option, redirecting to help menu")
+        # 停顿2秒之后再显示 help banner
         time.sleep(2)
+
+        # …… 这里直接使用 subprocess 来运行 help 增加了额外的开销， 这里可以优化，把help显示信息封装成一个方法， 然后调用这个方法即可
         cmd = "python whatwaf.py --help"
         subprocess.call(shlex.split(cmd))
         exit(0)
@@ -63,6 +59,7 @@ def main():
     # if you feel that you have to many folders or files in the whatwaf home folder
     # we'll give you an option to clean it free of charge
     if opt.cleanHomeFolder:
+        # 对文件的权限或者 移动 拷贝什么的
         import shutil
 
         try:
@@ -76,6 +73,8 @@ def main():
             # you have three seconds to change your mind
             raw_input("")
             info("attempting to clean home folder")
+            # 这个 HOME 是程序根目录下的 .whatwaf 文件夹, 例如 /root/.whatwaf
+            # 删了这个 .whatwaf 隐藏目录
             shutil.rmtree(HOME)
             info("home folder removed")
         except KeyboardInterrupt:
@@ -84,74 +83,95 @@ def main():
             fatal("no home folder detected, already cleaned?")
         exit(0)
 
+    # 来自于 database module 的 initialize 方法
+    # 初始化 sqlite3 数据库， 创建~/.whatwaf/whatwaf.sqlite
+    # 如果没有 cached_payloads 或者 cached_urls 表，就创建，否则跳过， 然后函数 return 一个 cursor 指针操作数据库的
     cursor = initialize()
 
+    # 如果指定了 --export FILE-TYPE 选项
     if opt.exportEncodedToFile is not None:
+        # fetch_data(cursor, is_payload=True)
+        # 如果 is_payload = True（默认）, 就获取 cached_payloads 表的所有的内容
+        # 若果 is_payload = False, 就获取 cached_urls 表的所有内容
+        # return 一个列表, 包含一行一行的数据， 然后列表里面镶嵌着 每一列的元组
         payloads = fetch_data(cursor)
         if len(payloads) != 0:
+            # export_payloads() 把 payload 列的数据写入文件，然后返回这个文件的 filename
             exported_payloads_path = export_payloads(payloads, opt.exportEncodedToFile)
             info("payloads exported to: {}".format(exported_payloads_path))
         else:
-            warn(
-                "there appears to be no payloads stored in the database, to create payloads use the following options:"
-            )
+            # 数据库里面没有数据
+            warn("there appears to be no payloads stored in the database, to create payloads use the following options:")
             proc = subprocess.check_output(["python", "whatwaf.py", "--help"])
             parsed_help = parse_help_menu(str(proc), "encoding options:", "output options:")
             print(parsed_help)
         exit(1)
 
+    # 如果指定了 -Vc --view-cache， 这个选项展示 cached_payload 和 cached_url 两张表的内容
     if opt.viewAllCache:
         cached_payloads = fetch_data(cursor)
+        # 获取　cached_url 表中的所有数据
         cached_urls = fetch_data(cursor, is_payload=False)
+
+        # 其实就是将 cached_payload 和 cached_url 两个表的数据 全部展示， 把他们展示的漂亮点而已
         display_cached(cached_urls, cached_payloads)
         exit(0)
 
+    # 指定了　-pC --payload-cache, 这个选项仅仅只展示 cached_payload 表的内容
     if opt.viewCachedPayloads:
         payloads = fetch_data(cursor)
         if len(payloads) != 0:
             display_cached(None, payloads)
         else:
-            warn(
-                "there appears to be no payloads stored in the database, to create payloads use the following options:"
-            )
+            warn("there appears to be no payloads stored in the database, to create payloads use the following options:")
             proc = subprocess.check_output(["python", "whatwaf.py", "--help"])
             parsed_help = parse_help_menu(proc, "encoding options:", "output options:")
             print(parsed_help)
         exit(0)
 
+    # 指定了　-uC --view-url-cache, 这个选项仅仅只展示 cached_url 表的内容
     if opt.viewUrlCache:
         cached_urls = fetch_data(cursor, is_payload=False)
         display_cached(cached_urls, None)
         exit(0)
 
+    # 指定了 -e --encode， 只是单个payload
+    #  -e PAYLOAD [TAMPER-SCRIPT-LOAD-PATH ...], --encode PAYLOAD [TAMPER-SCRIPT-LOAD-PATH ...]
+    # 这个地方 没有说 要如何指定 payload 和 payload 的路径, 先丢着
     if opt.encodePayload is not None:
         spacer = "-" * 30
+        # 获取 -e 后面的参数
+        # opt.encodePayload[0] 应该是 payload 名字
         payload = opt.encodePayload[0]
+        # opt.encodePayload[1:] 应该是 payload 的加载路径
         load_path = opt.encodePayload[1:]
         for load in load_path:
             try:
+                # encode(payload, script) 参数, script 应该就是 payload 位置参数
+                # eccode() 函数返回的是 根据payload 产生的 绕过 字符串
                 payload = encode(payload, load)
             except (AttributeError, ImportError):
                 warn("invalid load path given: '{}', skipping it and continuing".format(load))
         success("encoded successfully:")
-        print(
-            "{}\n{}\n{}".format(
-                spacer, payload, spacer
-            )
-        )
+        print("{}\n{}\n{}".format(spacer, payload, spacer))
+
+        # 上面得到 encoded successfully 之后，就把 payload 写入 database，这里是单个 payload
         insert_payload(payload, cursor)
         info("payload has been cached for future use")
         exit(0)
 
+    # 指定 -el --encode-list 指定 payload 文件， payload 要用一行一行的隔开
+    # -el PATH TAMPER-SCRIPT-LOAD-PATH, --encode-list PATH TAMPER-SCRIPT-LOAD-PATH
+    # 使用完的 payload 会写入数据库保存, 以便下次再使用
     if opt.encodePayloadList is not None:
         spacer = "-" * 30
         try:
             file_path, load_path = opt.encodePayloadList
-            info("encoding payloads from given file '{}' using given tamper '{}'".format(
-                file_path, load_path
-            ))
+            info("encoding payloads from given file '{}' using given tamper '{}'".format(file_path, load_path))
+
             with open(file_path) as payloads:
                 encoded = [encode(p.strip(), load_path) for p in payloads.readlines()]
+                # 如果指定了　--save FILENAME
                 if opt.saveEncodedPayloads is not None:
                     with open(opt.saveEncodedPayloads, "a+") as save:
                         for item in encoded:
@@ -161,10 +181,9 @@ def main():
                     success("payloads encoded successfully:")
                     print(spacer)
                     for i, item in enumerate(encoded, start=1):
+                        # 写入数据库
                         insert_payload(item, cursor)
-                        print(
-                            "#{} {}".format(i, item)
-                        )
+                        print("#{} {}".format(i, item))
                     print(spacer)
             info("payloads have been cached for future use")
         except IOError:
@@ -173,22 +192,33 @@ def main():
             fatal("invalid load path given, check the load path and try again")
         exit(0)
 
+    # 指定了 --update
     if opt.updateWhatWaf:
         info("update in progress")
         cmd = shlex.split("git pull origin master")
         subprocess.call(cmd)
         exit(0)
 
+    # 如果指定了 -h 这个 banner 出不来
     if not opt.hideBanner:
         print(BANNER)
 
+    # 指定了 --tampers
+    # 这个 options 的命令是 列出所有的 tamper 可用列表
     if opt.listEncodingTechniques:
         info("gathering available tamper script load paths")
+        # TAMPERS_DIRECTORY = "{}/content/tampers".format(CUR_DIR)
+        # CUR_DIR 是项目的根路径
+        # 返回的是所有的 tamper 的名字的集合 -> set()
+        # is_tampers=True 就是返回 tampers 目录下的所有 tamper 名字集合
+        # is_wafs=True 就是返回 plugins 目录下的所有 plugin 名字的集合
         tamper_list = get_encoding_list(TAMPERS_DIRECTORY, is_tampers=True, is_wafs=False)
         for tamper in sorted(tamper_list):
             print(tamper)
         exit(0)
 
+    # 指定了 --wafs
+    # 列出所有的 plugins 目录下的所有的 列表
     if opt.viewPossibleWafs:
         import importlib
 
@@ -202,11 +232,15 @@ def main():
                 pass
         exit(0)
 
-    # gotta find a better way to check for updates so ima hotfix it
-    #info("checking for updates")
-    #check_version()
+    # gotta find a better way to check for updates so im a hotfix it
+    # info("checking for updates")
+    # check_version()
 
+    # -Y --yaml sendToYAML
+    # -C --cvs sendToCSV
+    # -J --json sendToJSON
     format_opts = [opt.sendToYAML, opt.sendToCSV, opt.sendToJSON]
+    # 指定了 -F --format
     if opt.formatOutput:
         amount_used = 0
         for item in format_opts:
@@ -220,19 +254,23 @@ def main():
         elif amount_used == 0:
             warn(
                 "output will not be saved to a file as no file format was provided. to save output to file "
-                "pass one of the file format flags (IE `-J` for JSON format)", minor=True
+                "pass one of the file format flags (eg `-J` for JSON format)", minor=True
             )
     elif any(format_opts) and not opt.formatOutput:
         warn(
             "you've chosen to send the output to a file, but have not formatted the output, no file will be saved "
-            "do so by passing the format flag (IE `-F -J` for JSON format)"
+            "do so by passing the format flag (eg `-F -J` for JSON format)"
         )
 
+    # 指定了 --skip skipBypassChecks 和 --tamper-int amountOfTampersToDisplay
     if opt.skipBypassChecks and opt.amountOfTampersToDisplay is not None:
         warn(
             "you've chosen to skip bypass checks and chosen an amount of tamper to display, tampers will be skipped",
             minor=True
         )
+
+
+    # 看到了这------------------------------------
 
     # there is an extra dependency that you need in order
     # for requests to run behind socks proxies, we'll just

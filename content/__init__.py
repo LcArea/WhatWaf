@@ -1,3 +1,4 @@
+# encoding: utf8
 import os
 import re
 import json
@@ -212,6 +213,8 @@ class DetectionQueue(object):
 def encode(payload, script):
     """
     encode the payload with the provided tamper
+
+    这里其实是返回的一大串根据 payload 产生的 绕过 字符串
     """
     script = importlib.import_module(script)
     return script.tamper(payload)

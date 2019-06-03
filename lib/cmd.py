@@ -1,3 +1,7 @@
+# encoding: utf8
+"""
+专门处理 cmd 的 options 选项的， 返回一个 opts = parser.parse_args() 对象
+"""
 from argparse import (
     ArgumentParser,
     Action,
@@ -33,7 +37,6 @@ class StoreDictKeyPairs(Action):
 
 
 class WhatWafParser(ArgumentParser):
-
     """
     our cool little class that is a child of argparse where we will
     take all the data and arguments and return them into a single
@@ -45,79 +48,144 @@ class WhatWafParser(ArgumentParser):
 
     @staticmethod
     def cmd_parser():
-        parser = ArgumentParser(prog="whatwaf.py", add_help=True, usage=(
-            "./whatwaf.py -[u|l|b|g] VALUE|PATH|PATH|PATH [-p|--pl] PAYLOAD,..|PATH [--args]"
-        ))
+        """
+        # prog 程序的名字，默认 sys.argv[0]
+        # add_help true 启用帮助
+        # usage -> 描述程序的用法，默认是展示options的描述
 
-        mandatory = parser.add_argument_group("mandatory arguments",
-                                              "arguments that have to be passed for the program to run")
-        mandatory.add_argument("-u", "--url", dest="runSingleWebsite", metavar="URL",
-                               help="Pass a single URL to detect the protection")
-        mandatory.add_argument("-l", "--list", "-f", "--file", dest="runMultipleWebsites", metavar="PATH", default=None,
-                               help="Pass a file containing URL's (one per line) to detect the protection")
-        mandatory.add_argument("-b", "--burp", dest="burpRequestFile", metavar="FILE-PATH", default=None,
-                               help="Pass a Burp Suite request file to perform WAF evaluation")
+        :return: 返回 argparser 添加完所有的 options 之后的对象
+        """
         # apparently Python 3.x doesn't like it when there's a '%' in the string
         # this will cause some issues, more specifically a `TypeError` because it's trying
         # to format the string. so the simplest solution for the problem? remove the '%'
         # sign from the string. because Python 3.x likes to be as difficult and ridiculous
         # as it possibly can.
-        mandatory.add_argument("-g", "--googler", dest="googlerFile", metavar="GOOGLER-JSON-FILE",
+        parser = ArgumentParser(prog="whatwaf.py", add_help=True, usage=(
+            "./whatwaf.py -[u|l|b|g] VALUE|PATH|PATH|PATH [-p|--pl] PAYLOAD,..|PATH [--args]"
+        ))
+
+        # 增加参数组的，就是把所有的参数全部丢进参数组
+        mandatory = parser.add_argument_group("mandatory arguments",
+                                              "arguments that have to be passed for the program to run")
+        # 这个 dest 是要被程序用到的变量， 与这个 option 绑定
+        mandatory.add_argument("-u", "--url",
+                               dest="runSingleWebsite",
+                               metavar="URL",
+                               help="Pass a single URL to detect the protection")
+        mandatory.add_argument("-l", "--list", "-f", "--file",
+                               dest="runMultipleWebsites",
+                               metavar="PATH", default=None,
+                               help="Pass a file containing URL's (one per line) to detect the protection")
+        mandatory.add_argument("-b", "--burp",
+                               dest="burpRequestFile",
+                               metavar="FILE-PATH",
+                               default=None,
+                               help="Pass a Burp Suite request file to perform WAF evaluation")
+        mandatory.add_argument("-g", "--googler",
+                               dest="googlerFile",
+                               metavar="GOOGLER-JSON-FILE",
                                help="Pass a JSON file from the Googler CMD line tool "
                                     "(IE googler -n 100 --json >> googler.json)")
 
+        # 另外一个 options 组，这个会另起一行显示, 相当于另外一个 options 块
+        # request argument 组
         req_args = parser.add_argument_group("request arguments",
                                              "arguments that will control your requests")
-        req_args.add_argument("--pa", dest="usePersonalAgent", metavar="USER-AGENT",
+        req_args.add_argument("--pa",
+                              dest="usePersonalAgent",
+                              metavar="USER-AGENT",
                               help="Provide your own personal agent to use it for the HTTP requests")
-        req_args.add_argument("--ra", dest="useRandomAgent", action="store_true",
+        req_args.add_argument("--ra",
+                              dest="useRandomAgent",
+                              action="store_true",
                               help="Use a random user-agent for the HTTP requests")
-        req_args.add_argument("-H", "--headers", dest="extraHeaders", action=StoreDictKeyPairs,
+        req_args.add_argument("-H", "--headers",
+                              dest="extraHeaders",
+                              action=StoreDictKeyPairs,
                               metavar="HEADER=VALUE,HEADER:VALUE..",
                               help="Add your own custom headers to the request. To use multiple "
                                    "separate headers by comma. Your headers need to be exact"
                                    "(IE: Set-Cookie=a345ddsswe,X-Forwarded-For:127.0.0.1)")
-        req_args.add_argument("--proxy", dest="runBehindProxy", metavar="PROXY",
-                              help="Provide a proxy to run behind in the format "
-                                   "type://address:port (IE socks5://10.54.127.4:1080")
-        req_args.add_argument("--tor", dest="runBehindTor", action="store_true",
+        req_args.add_argument("--proxy",
+                              dest="runBehindProxy",
+                              metavar="PROXY",
+                              help="Provide a proxy to run behind in the format type://address:port (IE socks5://10.54.127.4:1080")
+        req_args.add_argument("--tor",
+                              dest="runBehindTor",
+                              action="store_true",
                               help="Use Tor as the proxy to run behind, must have Tor installed")
-        req_args.add_argument("--check-tor", dest="checkTorConnection", action="store_true",
+        req_args.add_argument("--check-tor",
+                              dest="checkTorConnection",
+                              action="store_true",
                               help="Check your Tor connection")
-        req_args.add_argument("-p", "--payloads", dest="providedPayloads", metavar="PAYLOADS",
+        req_args.add_argument("-p", "--payloads",
+                              dest="providedPayloads",
+                              metavar="PAYLOADS",
                               help="Provide your own payloads separated by a comma IE AND 1=1,AND 2=2")
-        req_args.add_argument("--pl", dest="payloadList", metavar="PAYLOAD-LIST-PATH",
+        req_args.add_argument("--pl",
+                              dest="payloadList",
+                              metavar="PAYLOAD-LIST-PATH",
                               help="Provide a file containing a list of payloads 1 per line")
-        req_args.add_argument("--force-ssl", dest="forceSSL", action="store_true",
-                              help="Force the assignment of HTTPS instead of HTTP while processing "
-                                   "(*default=HTTP unless otherwise specified by URL)")
-        req_args.add_argument("--throttle", dest="sleepTimeThrottle", type=int, metavar="THROTTLE-TIME (seconds)",
-                              default=0, help="Provide a sleep time per request (*default=0)")
-        req_args.add_argument("--timeout", dest="requestTimeout", type=int, metavar="TIMEOUT",
-                              default=15, help="Control the timeout time of the requests (*default=15)")
-        req_args.add_argument("-P", "--post", dest="postRequest", action="store_true",
+        req_args.add_argument("--force-ssl",
+                              dest="forceSSL",
+                              action="store_true",
+                              help="Force the assignment of HTTPS instead of HTTP while processing (*default=HTTP unless otherwise specified by URL)")
+        req_args.add_argument("--throttle",
+                              dest="sleepTimeThrottle",
+                              type=int,
+                              metavar="THROTTLE-TIME (seconds)",
+                              default=0,
+                              help="Provide a sleep time per request (*default=0)")
+        req_args.add_argument("--timeout",
+                              dest="requestTimeout",
+                              type=int,
+                              metavar="TIMEOUT",
+                              default=15,
+                              help="Control the timeout time of the requests (*default=15)")
+        req_args.add_argument("-P", "--post",
+                              dest="postRequest",
+                              action="store_true",
                               help="Send a POST request (*default=GET)")
-        req_args.add_argument("-D", "--data", dest="postRequestData", metavar="POST-STRING",
+        req_args.add_argument("-D", "--data",
+                              dest="postRequestData",
+                              metavar="POST-STRING",
                               help="Send this data with the POST request "
                                    "(IE password=123&name=Josh *default=random)")
-        req_args.add_argument("-t", "--threaded", dest="threaded", metavar="threaded", type=int,
+        req_args.add_argument("-t", "--threaded",
+                              dest="threaded",
+                              metavar="threaded",
+                              type=int,
                               help="Send requests in parallel (specify number of threads *default=1)")
-        req_args.add_argument("-tP", "--tor-port", type=int, default=9050, dest="configTorPort",
+        req_args.add_argument("-tP", "--tor-port",
+                              type=int,
+                              default=9050,
+                              dest="configTorPort",
                               help="Change the port that Tor runs on (*default=9050)")
-        req_args.add_argument("-T", "--test", dest="testTargetConnection", default=True, action="store_false",
+        req_args.add_argument("-T", "--test",
+                              dest="testTargetConnection",
+                              default=True,
+                              action="store_false",
                               help="Test the connection to the website before starting (default is True)")
 
+        # 另外一个 options 组
+        # encoding argument 组
         encoding_opts = parser.add_argument_group("encoding options",
                                                   "arguments that control the encoding of payloads")
-        encoding_opts.add_argument("-e", "--encode", dest="encodePayload", nargs="+", metavar=("PAYLOAD", "TAMPER-SCRIPT-LOAD-PATH"),
+        encoding_opts.add_argument("-e", "--encode",
+                                   dest="encodePayload", nargs="+", metavar=("PAYLOAD", "TAMPER-SCRIPT-LOAD-PATH"),
                                    help="Encode a provided payload using provided tamper script(s) "
                                         "you are able to payy multiple tamper script load paths to "
                                         "this argument and the payload will be tampered as requested")
-        encoding_opts.add_argument("-el", "--encode-list", dest="encodePayloadList", nargs=2, metavar=("PATH", "TAMPER-SCRIPT-LOAD-PATH"),
+        encoding_opts.add_argument("-el", "--encode-list",
+                                   dest="encodePayloadList",
+                                   nargs=2,
+                                   metavar=("PATH", "TAMPER-SCRIPT-LOAD-PATH"),
                                    help="Encode a file containing payloads (one per line) "
                                         "by passing the path and load path, files can only "
                                         "encoded using a single tamper script load path")
 
+        # 另外一个 options 组
+        # output argument 组
         output_opts = parser.add_argument_group("output options",
                                                 "arguments that control how WhatWaf handles output")
         output_opts.add_argument("-F", "--format", action="store_true", dest="formatOutput",
@@ -128,21 +196,40 @@ class WhatWafParser(ArgumentParser):
                                  help="Send the output to a YAML file")
         output_opts.add_argument("-C", "--csv", action="store_true", dest="sendToCSV",
                                  help="Send the output to a CSV file")
-        output_opts.add_argument("--fingerprint", action="store_true", dest="saveFingerprints",
+        output_opts.add_argument("--fingerprint",
+                                 action="store_true",
+                                 dest="saveFingerprints",
                                  help="Save all fingerprints for further investigation")
-        output_opts.add_argument("--tamper-int", metavar="INT", dest="amountOfTampersToDisplay", type=int, default=5,
+        output_opts.add_argument("--tamper-int",
+                                 metavar="INT",
+                                 dest="amountOfTampersToDisplay",
+                                 type=int,
+                                 default=5,
                                  help="Control the amount of tampers that are displayed (*default=5)")
-        output_opts.add_argument("--traffic", metavar="FILENAME", dest="trafficFile",
+        output_opts.add_argument("--traffic",
+                                 metavar="FILENAME",
+                                 dest="trafficFile",
                                  help="store all HTTP traffic headers into a file of your choice")
-        output_opts.add_argument("--force-file", action="store_true", default=False, dest="forceFileCreation",
+        output_opts.add_argument("--force-file",
+                                 action="store_true",
+                                 default=False,
+                                 dest="forceFileCreation",
                                  help="Force the creation of a file even if there is no protection identified")
-        output_opts.add_argument("-o", "--output", metavar="DIR", dest="outputDirectory", default=None,
+        output_opts.add_argument("-o", "--output",
+                                 metavar="DIR",
+                                 dest="outputDirectory",
+                                 default=None,
                                  help="Save a copy of the file to an arbitrary directory")
 
+        # 另外一个 options 组
+        # database argument 组
         database_arguments = parser.add_argument_group("database arguments",
                                                        "arguments that pertain to Whatwafs database")
         database_arguments.add_argument(
-            "-c", "--url-cache", default=False, action="store_true", dest="checkCachedUrls",
+            "-c", "--url-cache",
+            default=False,
+            action="store_true",
+            dest="checkCachedUrls",
             help="Check against URL's that have already been cached into the database before running them "
                  "saves some time on scanning multiple (*default=False)"
         )
@@ -163,9 +250,11 @@ class WhatWafParser(ArgumentParser):
             "--export", metavar="FILE-TYPE", default=None, dest="exportEncodedToFile",
             choices=["txt", "text", "json", "csv", "yaml", "yml"],
             help="Export the already encoded payloads to a specified file type and save them "
-                 "under the home directory"
+                 "under the home(~/.whatwaf) directory"
         )
 
+        # 另外的 options 组
+        # misc argument 组
         misc = parser.add_argument_group("misc arguments",
                                          "arguments that don't fit in any other category")
         misc.add_argument("--verbose", dest="runInVerbose", action="store_true",
@@ -189,10 +278,14 @@ class WhatWafParser(ArgumentParser):
         misc.add_argument("--tampers", action="store_true", dest="listEncodingTechniques",
                           help="Output a list of usable tamper script load paths")
 
+        # 另外一个 options 组
+        # 隐藏组，暂时不知如何做到的隐藏
         hidden = parser.add_argument_group()
         hidden.add_argument("--clean", action="store_true", dest="cleanHomeFolder", help=SUPPRESS)
 
+        # 把所有的 argparser 全部提交上去
         opts = parser.parse_args()
 
+        # 返回 argparser 添加完所有的 options 之后的对象
         return opts
 

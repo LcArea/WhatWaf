@@ -1,3 +1,4 @@
+# encoding: utf8
 import os
 import re
 import sys
@@ -349,9 +350,9 @@ def produce_results(found_tampers):
 
 def random_string(acceptable=string.ascii_letters, length=5, use_json=False, use_yaml=False, use_csv=False):
     """
-    create a random string for some of the tamper scripts that
-    need a random string in order to work properly
+    create a random string for some of the tamper scripts that need a random string in order to work properly
     """
+    # random_chars 是一个 随机字符 列表
     random_chars = [random.choice(acceptable) for _ in range(length)]
     if use_json:
         return "{}.json".format(''.join(random_chars))
@@ -360,6 +361,7 @@ def random_string(acceptable=string.ascii_letters, length=5, use_json=False, use
     elif use_csv:
         return "{}.csv".format(''.join(random_chars))
     else:
+        # 如果都是 False ，就随便用个随机字符， 默认为5个字符
         return ''.join(random_chars)
 
 
@@ -640,10 +642,21 @@ def save_temp_issue(data):
 def export_payloads(payloads, file_type):
     """
     export cached payloads from the database into a file for further use
+
+    EXPORTED_PAYLOADS_PATH -> ~/.whatwaf/payload_exports
+
+    payloads 是个列表, 列表里面嵌着每一列的元组
+
+    return filename
     """
+
     if not os.path.exists(EXPORTED_PAYLOADS_PATH):
         os.makedirs(EXPORTED_PAYLOADS_PATH)
-    is_json, is_csv, is_yaml = False, False, False
+
+    is_json = False
+    is_csv = False
+    is_yaml = False
+
     if file_type.lower() == "json":
         is_json = True
     elif file_type.lower() == "csv":
@@ -655,12 +668,19 @@ def export_payloads(payloads, file_type):
         except ImportError:
             lib.formatter.fatal("you need the pyYAML library to export to yaml, get it by typing `pip install pyyaml`")
             exit(1)
+
+    # random_string 返回一个 默认长度为5 的随机字符命令的文件，后缀为加上的 file_type 例如 csv json yalm
+    # 如果都为 False， 就不已这些后缀结尾，直接返回一个 长度为 15 的随机字符
     filename = random_string(use_csv=is_csv, use_json=is_json, use_yaml=is_yaml, length=15)
+    # file_path -> ~/.whatwaf/payload_export/whatwaf_文件类型_随机字符
     file_path = "{}/whatwaf_{}_export_{}".format(EXPORTED_PAYLOADS_PATH, file_type.lower(), filename)
+
+    # 把数据库中的 payload列 的所有数据写入文件
     with open(file_path, "a+") as dump_file:
         if is_json:
             retval = {"payloads": []}
             for item in payloads:
+                # item 是每一行每一行的数据, item[-1] 是取列名为 payload 的数据
                 retval["payloads"].append(str(item[-1]))
             json.dump(retval, dump_file)
         elif is_csv:
@@ -680,6 +700,7 @@ def export_payloads(payloads, file_type):
                 retval["payloads"].append(str(item[-1]))
             yaml.dump(retval, dump_file, default_flow_style=False)
         else:
+            # file_type 为 Null 的情况
             for item in payloads:
                 dump_file.write("{}\n".format(str(item[-1])))
     return file_path
@@ -714,13 +735,18 @@ def check_url_against_cached(given, cursor):
 def display_cached(urls, payloads):
     """
     display the database information in a neat format
+
+    其实就是将 cached_payload 和 cached_url 两个表的数据 全部展示， 把他们展示的漂亮点而已
     """
     if urls is not None:
         if len(urls) != 0:
             lib.formatter.info("cached URLs:")
+            # enumerate 是将一个可迭代的对象，例如列表或者元组， 加上一个序号索引（从0开始的）
             for i, cached in enumerate(urls):
+                # i 为索引值, 从0开始的
                 _, netlock, prots, tamps, server = cached
                 print(" {}".format("-" * 15))
+                # 这段的意思是输出表格一样的东西，可视化url
                 print(
                     "{sep} URL: {url}\n{sep} Identified Protections: {protect}\n"
                     "{sep} Working tampers: {tamp}\n{sep} Web server: {server}".format(
@@ -730,6 +756,7 @@ def display_cached(urls, payloads):
             print(" {}".format("-" * 15))
         else:
             lib.formatter.warn("there are no cached URLs in the database")
+
     if payloads is not None:
         if len(payloads) != 0:
             lib.formatter.info("cached payloads:")

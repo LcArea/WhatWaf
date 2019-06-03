@@ -1,3 +1,4 @@
+# encoding: utf8
 import os
 import sqlite3
 
@@ -7,9 +8,13 @@ import lib.settings
 def initialize():
     """
     initialize the database and the HOME directory (~/.whatwaf)
+
+    DATABASE_FILENAME 指向 ~/.whatwaf/whatwaf.sqlite
+    如果不存在 whatwaf.sqlite 文件，就初始化
     """
+
     if not os.path.exists(lib.settings.DATABASE_FILENAME):
-        # idk why but apparently i never create the directory :|
+        # 如果没有 ~/.whatwaf HOME 文件夹, 就 mkdir 一个
         if not os.path.exists(lib.settings.HOME):
             try:
                 os.makedirs(lib.settings.HOME)
@@ -63,9 +68,7 @@ def insert_payload(payload, cursor):
             if cache_payload == payload:
                 is_inserted = True
         if not is_inserted:
-            cursor.execute(
-                "INSERT INTO cached_payloads (id,payload) VALUES (?,?)", (id_number, payload)
-            )
+            cursor.execute("INSERT INTO cached_payloads (id,payload) VALUES (?,?)", (id_number, payload))
     except Exception:
         return False
     return True

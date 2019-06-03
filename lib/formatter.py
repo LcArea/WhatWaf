@@ -43,15 +43,11 @@ def warn(string, minor=False):
                 "\033[38m[{}]\033[0m".format(time.strftime("%H:%M:%S")) + set_color("[WARN] {}".format(string), level=30)
         )
     else:
-        print(
-                "\033[38m[{}]\033[0m".format(time.strftime("%H:%M:%S")) + set_color("[WARN] {}".format(string), level=35)
-        )
+        print("\033[38m[{}]\033[0m".format(time.strftime("%H:%M:%S")) + set_color("[WARN] {}".format(string), level=35))
 
 
 def error(string):
-    print(
-            "\033[38m[{}]\033[0m".format(time.strftime("%H:%M:%S")) + set_color("[ERROR] {}".format(string), level=40)
-    )
+    print("\033[38m[{}]\033[0m".format(time.strftime("%H:%M:%S")) + set_color("[ERROR] {}".format(string), level=40))
 
 
 def fatal(string):
