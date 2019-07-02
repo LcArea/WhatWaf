@@ -1,0 +1,9 @@
+## 这是与原版的差异记录文件
+
+1. 修改了部分架构，另其更加符合软件工程规范
+2. omit --hide options 因为根本就没什么卵用
+3. 从 settings 中删除 DEFAULT_USER_AGENT 
+4. 从 command line 中删除 --check-tor 选项，默认带上它
+5. 从 command line 中删除 -c --url-cache, 默认带上它，没必要特意指定
+6. 从 command line 中删除 -T --test default = True, 默认带上它，没必要特意指定
+7. 从 command line 中删除 --fingerprint 没什么卵用

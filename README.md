@@ -1,24 +1,8 @@
-<!--[![alt text][1.1]][1] [![alt text][6.1]][6]-->
+# WhatWaf
+##### 概述
+WhatWaf 是一个高级的防火墙检测工具，用于检测当前Web url 或者 Web应用使用了什么Waf，通过特定的选项可以使用特定的 payload 绕过防火墙，剩下的靠自己去挖掘了
+##### 免责声明
+此项目来源为 [github](https://github.com/Ekultek/WhatWaf)
 
-[1]: https://twitter.com/stay__salty
-[1.1]: http://i.imgur.com/tXSoThF.png
-
-[6]: http://www.github.com/ekultek
-[6.1]: http://i.imgur.com/0o48UoR.png
-
-# WhatWaf?
-
-WhatWaf is an advanced firewall detection tool who's goal is to give you the idea of "There's a WAF?". WhatWaf works by detecting a firewall on a web application, and attempting to detect a bypass (or two) for said firewall, on the specified target. 
-
-# Helpful links
- - Create an [issue](https://github.com/Ekultek/WhatWaf/issues/new)
- - Read the [manual](https://github.com/Ekultek/WhatWaf/wiki/Functionality)
- - WhatWafs [Features](https://github.com/Ekultek/WhatWaf/blob/master/.github/README2.md#features)
- - [Installing](https://github.com/Ekultek/WhatWaf/blob/master/.github/README2.md#installation) WhatWaf
- - PoC
-   - [Demo video](https://github.com/Ekultek/WhatWaf/blob/master/.github/README2.md#demo-video)
-   - [Proof of Concept images](https://github.com/Ekultek/WhatWaf/blob/master/.github/README2.md#proof-of-concept)
- - [Get involved](https://github.com/Ekultek/WhatWaf/blob/master/.github/README2.md#get-involved)
- - Follow me on [![alt text][1.1]][1]
- - Follow me on [![alt text][6.1]][6]
- ---
+在遵循源项目的开源协议的基础上修改整体架构，使其更加符合软件工程的规范
+原功能基本不变，只做一些更改, 更改的条目在 CHANGELOG 文件中

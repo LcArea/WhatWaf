@@ -1,4 +1,5 @@
 #!/bin/bash
+# 这个脚本我没有动
 
 
 CURRENT_WHATWAF_VERSION=$(cat ./lib/settings.py | grep 'VERSION = ' | cut -d' ' -f 3 | cut -d'"' -f 2)
@@ -30,7 +31,7 @@ function install {
   mkdir $exec_dir;
   mkdir $copy_dir;
   chmod +x ./whatwaf.py
-  echo "copying files over..";
+  echo "copying data over..";
   rsync -drq . $copy_dir
   echo "creating executable";
   cat << EOF > $exec_filename
